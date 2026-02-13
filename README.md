@@ -1,4 +1,4 @@
-# OMRChecker RVCE
+# RVCE OMR
 
 ### running instructions: 
 
