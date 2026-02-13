@@ -18,49 +18,30 @@ FONT_SIZE = 13
 
 
 def create_overlay(page_width, page_height, text):
-    """
-    Create a PDF overlay with the serial number text.
-    """
+
     packet = BytesIO()
     c = canvas.Canvas(packet, pagesize=(page_width, page_height))
+    # color for the red text used in given template - #ee1d23
     c.setFillColor(Color(238/255, 29/255, 35/255))
-    # #ee1d23
     c.setFont("Times-Bold", FONT_SIZE)
     c.drawString(TEXT_X, TEXT_Y, text)
     c.save()
     packet.seek(0)
     return PdfReader(packet)
 
-
-def convert_image_to_pdf(image_path):
-    """
-    Convert image to single-page PDF in memory.
-    """
-    image = Image.open(image_path)
-    pdf_bytes = BytesIO()
-    image.convert("RGB").save(pdf_bytes, format="PDF")
-    pdf_bytes.seek(0)
-    return PdfReader(pdf_bytes)
-
-
 def main():
     # Determine if input is PDF or image
-    if INPUT_FILE.lower().endswith(".pdf"):
-        base_pdf = PdfReader(INPUT_FILE)
-    else:
-        base_pdf = convert_image_to_pdf(INPUT_FILE)
-
+    base_pdf = PdfReader(INPUT_FILE)
     base_page = base_pdf.pages[0]
     page_width = float(base_page.mediabox.width)
     page_height = float(base_page.mediabox.height)
 
     writer = PdfWriter()
 
-
     for i in range(START, END + 1):
         serial = f"1{i:04d}"
 
-        page = copy.deepcopy(base_page)  # TRUE CLONE
+        page = copy.deepcopy(base_page)
 
         overlay_pdf = create_overlay(page_width, page_height, serial)
         overlay_page = overlay_pdf.pages[0]
@@ -68,8 +49,6 @@ def main():
         page.merge_page(overlay_page)
         writer.add_page(page)
 
-
-    # Write final PDF
     with open(OUTPUT_FILE, "wb") as f:
         writer.write(f)
 
