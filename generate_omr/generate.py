@@ -10,7 +10,7 @@ import copy
 INPUT_FILE = "input.pdf"
 OUTPUT_FILE = "output_serialized.pdf"
 START = 1
-END = 1500
+END = 11
 
 TEXT_X = 455
 TEXT_Y = 785
@@ -18,7 +18,6 @@ FONT_SIZE = 13
 
 
 def create_overlay(page_width, page_height, text):
-
     packet = BytesIO()
     c = canvas.Canvas(packet, pagesize=(page_width, page_height))
     # color for the red text used in given template - #ee1d23
@@ -30,7 +29,6 @@ def create_overlay(page_width, page_height, text):
     return PdfReader(packet)
 
 def main():
-    # Determine if input is PDF or image
     base_pdf = PdfReader(INPUT_FILE)
     base_page = base_pdf.pages[0]
     page_width = float(base_page.mediabox.width)

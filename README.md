@@ -1,6 +1,6 @@
 # RVCE OMR
 
-### running instructions: 
+### running instructions (backend and frontend): 
 
 backend: 
 
