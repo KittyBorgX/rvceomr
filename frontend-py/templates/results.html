@@ -85,14 +85,24 @@
             <div class="card">
                 <div class="card-header flex-row">
                     <h2 class="card-title">Detailed Results</h2>
-                    <button id="download-btn" class="btn btn-success btn-sm">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                            <polyline points="7 10 12 15 17 10"/>
-                            <line x1="12" x2="12" y1="15" y2="3"/>
-                        </svg>
-                        Download CSV
-                    </button>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button id="download-btn" class="btn btn-success btn-sm">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" x2="12" y1="15" y2="3"/>
+                            </svg>
+                            Summary
+                        </button>
+                        <button id="download-btn-full" class="btn btn-secondary btn-sm">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" x2="12" y1="15" y2="3"/>
+                            </svg>
+                            Full CSV
+                        </button>
+                    </div>
                 </div>
                 <div class="card-content">
                     <div class="table-container">
@@ -115,8 +125,8 @@
                 </div>
             </div>
 
-            <!-- Download Button -->
-            <div class="mt-6 text-center">
+            <!-- Download Buttons -->
+            <div class="mt-6 text-center" style="display: flex; gap: 1rem; justify-content: center;">
                 <button id="download-btn-lg" class="btn btn-success btn-lg">
                     <span class="btn-text">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -124,7 +134,21 @@
                             <polyline points="7 10 12 15 17 10"/>
                             <line x1="12" x2="12" y1="15" y2="3"/>
                         </svg>
-                        Download CSV Results
+                        Download Summary
+                    </span>
+                    <span class="btn-loading hidden">
+                        <span class="spinner spinner-white"></span>
+                        Downloading...
+                    </span>
+                </button>
+                <button id="download-btn-lg-full" class="btn btn-secondary btn-lg">
+                    <span class="btn-text">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" x2="12" y1="15" y2="3"/>
+                        </svg>
+                        Download Full CSV
                     </span>
                     <span class="btn-loading hidden">
                         <span class="spinner spinner-white"></span>
@@ -159,9 +183,13 @@ let resultsData = null;
 function initResultsPage() {
     fetchResults();
     
-    // Download button handlers
-    document.getElementById('download-btn').addEventListener('click', handleDownload);
-    document.getElementById('download-btn-lg').addEventListener('click', handleDownload);
+    // Download button handlers - Summary
+    document.getElementById('download-btn').addEventListener('click', () => handleDownload('summary'));
+    document.getElementById('download-btn-lg').addEventListener('click', () => handleDownload('summary'));
+    
+    // Download button handlers - Full
+    document.getElementById('download-btn-full').addEventListener('click', () => handleDownload('full'));
+    document.getElementById('download-btn-lg-full').addEventListener('click', () => handleDownload('full'));
 }
 
 function fetchResults() {
@@ -232,12 +260,20 @@ function updateResultsTable(results) {
     }).join('');
 }
 
-function handleDownload() {
-    const btn = document.getElementById('download-btn-lg');
-    setDownloading(true);
+function handleDownload(type) {
+    const btnId = type === 'summary' ? 'download-btn-lg' : 'download-btn-lg-full';
+    const btn = document.getElementById(btnId);
+    const endpoint = type === 'summary' 
+        ? `/api/omr/results/${batchId}/download` 
+        : `/api/omr/results/${batchId}/download-full`;
+    const filename = type === 'summary' 
+        ? `Results_${batchId}_Summary.csv` 
+        : `Results_${batchId}_Full.csv`;
+    
+    setDownloading(type, true);
     hideError();
     
-    fetch(`/api/omr/results/${batchId}/download`)
+    fetch(endpoint)
         .then(response => {
             if (!response.ok) {
                 throw new Error('Download failed');
@@ -249,7 +285,7 @@ function handleDownload() {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `Results_${batchId}.csv`;
+            a.download = filename;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -259,16 +295,27 @@ function handleDownload() {
             showDownloadError(error.message || 'Failed to download CSV');
         })
         .finally(() => {
-            setDownloading(false);
+            setDownloading(type, false);
         });
 }
 
-function setDownloading(downloading) {
-    const btn = document.getElementById('download-btn-lg');
-    btn.disabled = downloading;
-    btn.querySelector('.btn-text').classList.toggle('hidden', downloading);
-    btn.querySelector('.btn-loading').classList.toggle('hidden', !downloading);
-    document.getElementById('download-btn').disabled = downloading;
+function setDownloading(type, downloading) {
+    const lgBtnId = type === 'summary' ? 'download-btn-lg' : 'download-btn-lg-full';
+    const smBtnId = type === 'summary' ? 'download-btn' : 'download-btn-full';
+    
+    const btn = document.getElementById(lgBtnId);
+    if (btn) {
+        btn.disabled = downloading;
+        const btnText = btn.querySelector('.btn-text');
+        const btnLoading = btn.querySelector('.btn-loading');
+        if (btnText) btnText.classList.toggle('hidden', downloading);
+        if (btnLoading) btnLoading.classList.toggle('hidden', !downloading);
+    }
+    
+    const smBtn = document.getElementById(smBtnId);
+    if (smBtn) {
+        smBtn.disabled = downloading;
+    }
 }
 
 function showError(message) {

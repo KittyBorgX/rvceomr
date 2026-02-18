@@ -345,15 +345,59 @@ async def get_results(batch_id: str):
 @router.get("/download/{batch_id}")
 async def download_results(batch_id: str):
     """
-    Download results as CSV file
+    Download results as simplified CSV file (rollNumber, score, maxScore, error only)
 
     Args:
         batch_id: Batch identifier
 
     Returns:
-        CSV file download
+        CSV file download with simplified columns
     """
-    logger.info(f"📥 Download request received for batch: {batch_id}")
+    logger.info(f"📥 Download request received for batch: {batch_id} (summary)")
+
+    # Get results for the batch
+    results = get_batch_results(batch_id)
+
+    if not results:
+        logger.error(f"❌ No results found for batch: {batch_id}")
+        raise HTTPException(status_code=404, detail="Results not found")
+
+    # Create simplified CSV with only required columns
+    output = io.StringIO()
+    df = pd.DataFrame(results)
+
+    # Select only the columns we need
+    columns = ["rollNumber", "score", "maxScore", "error"]
+    available_columns = [col for col in columns if col in df.columns]
+    simplified_df = df[available_columns]
+
+    simplified_df.to_csv(output, index=False)
+    csv_content = output.getvalue()
+    output.close()
+
+    logger.info(f"✅ Simplified CSV created for batch: {batch_id}")
+
+    return StreamingResponse(
+        io.BytesIO(csv_content.encode("utf-8")),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename=Results_{batch_id}_Summary.csv"
+        },
+    )
+
+
+@router.get("/download/{batch_id}/full")
+async def download_results_full(batch_id: str):
+    """
+    Download results as full CSV file with all columns
+
+    Args:
+        batch_id: Batch identifier
+
+    Returns:
+        CSV file download with all columns
+    """
+    logger.info(f"📥 Download request received for batch: {batch_id} (full)")
 
     # Export batch to CSV
     csv_path = get_batch_csv_export(batch_id)
@@ -369,8 +413,10 @@ async def download_results(batch_id: str):
     return FileResponse(
         path=str(csv_path),
         media_type="text/csv",
-        filename=f"Results_{batch_id}.csv",
-        headers={"Content-Disposition": f"attachment; filename=Results_{batch_id}.csv"},
+        filename=f"Results_{batch_id}_Full.csv",
+        headers={
+            "Content-Disposition": f"attachment; filename=Results_{batch_id}_Full.csv"
+        },
     )
 
 
