@@ -1,5 +1,5 @@
 @echo off
-start "Backend (port 8000)" cmd /k "cd /d %~dp0backend && ..\.venv\Scripts\activate.bat && python main.py"
+start "Backend (port 8000)" cmd /k "cd /d %~dp0backend && ..\.venv\Scripts\activate.bat && ..\.venv\Scripts\python main.py"
 start "Frontend (port 3000)" cmd /k "cd /d %~dp0frontend && npm run dev"
 echo.
 echo ========================================

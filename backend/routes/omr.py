@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import List
 
 import pandas as pd
-from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
 from backend.config import (
@@ -47,6 +47,7 @@ def _to_number(value, default=0.0):
         return n
     except Exception:
         return float(default)
+
 
 # Get logger (configured in main.py)
 logger = logging.getLogger(__name__)
@@ -85,7 +86,9 @@ def validate_image_file(file: UploadFile) -> bool:
 
 @router.post("/upload")
 async def upload_batch(
-    files: List[UploadFile] = File(...), background_tasks: BackgroundTasks = None
+    files: List[UploadFile] = File(...),
+    batchName: str = Form(None),
+    background_tasks: BackgroundTasks = None,
 ):
     """
     Upload a batch of OMR images for processing
@@ -116,7 +119,12 @@ async def upload_batch(
 
     # Create unique batch ID
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    batch_id = f"batch_{timestamp}"
+    if batchName:
+        # Sanitize batch name for filesystem safety
+        safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in batchName)
+        batch_id = f"{safe_name}_{timestamp}"
+    else:
+        batch_id = f"batch_{timestamp}"
 
     logger.info(f"🆔 Created batch ID: {batch_id}")
 
@@ -302,15 +310,17 @@ async def get_results(batch_id: str):
     # Simplify results for response
     simplified_results = []
     for r in results:
-        simplified_results.append({
-            "fileName": r.get("fileName", ""),
-            "rollNumber": r.get("rollNumber", ""),
-            "score": _to_number(r.get("score", 0)),
-            "maxScore": _to_number(r.get("maxScore", 0)),
-            "percentage": _to_number(r.get("percentage", 0)),
-            "status": r.get("status", ""),
-            "error": r.get("error", ""),
-        })
+        simplified_results.append(
+            {
+                "fileName": r.get("fileName", ""),
+                "rollNumber": r.get("rollNumber", ""),
+                "score": _to_number(r.get("score", 0)),
+                "maxScore": _to_number(r.get("maxScore", 0)),
+                "percentage": _to_number(r.get("percentage", 0)),
+                "status": r.get("status", ""),
+                "error": r.get("error", ""),
+            }
+        )
 
     return {
         "batchId": batch_id,

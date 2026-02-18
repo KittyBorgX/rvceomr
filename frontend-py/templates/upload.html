@@ -1,0 +1,469 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Center | RVCE OMR Grading System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-container">
+        <!-- Header -->
+        <div class="mb-8">
+            <a href="/" class="back-link">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m15 18-6-6 6-6"/>
+                </svg>
+                Back to Dashboard
+            </a>
+            <h1 class="page-title">Upload Center</h1>
+            <p class="page-description">Upload OMR sheets or Excel answer keys</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs-container">
+            <div class="tabs-list tabs-list-lg">
+                <button class="tab-trigger {% if initial_tab != 'excel' %}active{% endif %}" data-tab="omr">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" x2="12" y1="3" y2="15"/>
+                    </svg>
+                    OMR Sheets
+                </button>
+                <button class="tab-trigger {% if initial_tab == 'excel' %}active{% endif %}" data-tab="excel">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="9" height="9" x="3" y="3" rx="1"/>
+                        <rect width="9" height="9" x="3" y="12" rx="1"/>
+                        <path d="M14 8h7v7h-7z"/>
+                        <path d="M14 17h7"/>
+                        <path d="M14 20h7"/>
+                    </svg>
+                    Answer Key
+                </button>
+            </div>
+
+            <div class="tabs-content">
+                <!-- OMR Upload Tab -->
+                <div class="tab-panel {% if initial_tab != 'excel' %}active{% endif %}" id="tab-omr">
+                    <!-- Upload Zone -->
+                    <div class="card card-upload">
+                        <div id="drop-zone" class="drop-zone">
+                            <input type="file" id="file-input" multiple accept="image/*" class="file-input">
+                            <div class="drop-zone-content">
+                                <div class="drop-zone-icon">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                        <polyline points="17 8 12 3 7 8"/>
+                                        <line x1="12" x2="12" y1="3" y2="15"/>
+                                    </svg>
+                                </div>
+                                <p class="drop-zone-text">
+                                    <strong>Drop OMR images here</strong> or click to browse
+                                </p>
+                                <p class="drop-zone-hint">Supports: JPG, PNG, TIFF</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- File List -->
+                    <div id="file-list-container" class="card hidden">
+                        <div class="card-header">
+                            <h2 class="card-title">Selected Files (<span id="file-count">0</span>)</h2>
+                        </div>
+                        <div class="card-content">
+                            <div id="file-list" class="file-list">
+                                <!-- Files will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Batch Name -->
+                    <div class="card">
+                        <div class="card-header">
+                            <label for="batch-name" class="form-label">Batch Name (Optional)</label>
+                        </div>
+                        <div class="card-content">
+                            <input type="text" id="batch-name" class="form-input" placeholder="e.g., Section A - Tuesday">
+                        </div>
+                    </div>
+
+                    <!-- Error Message -->
+                    <div id="error-message" class="alert alert-error hidden">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" x2="12" y1="8" y2="12"/>
+                            <line x1="12" x2="12.01" y1="16" y2="16"/>
+                        </svg>
+                        <span id="error-text"></span>
+                    </div>
+
+                    <!-- Upload Button -->
+                    <div class="upload-actions">
+                        <button id="upload-btn" class="btn btn-primary btn-lg" disabled>
+                            <span class="btn-text">Upload Files</span>
+                            <span class="btn-loading hidden">
+                                <span class="spinner spinner-white"></span>
+                                Uploading...
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Excel Upload Tab -->
+                <div class="tab-panel {% if initial_tab == 'excel' %}active{% endif %}" id="tab-excel">
+                    <!-- Format Instructions -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Answer Key Format</h2>
+                        </div>
+                        <div class="card-content">
+                            <div class="format-list">
+                                <div class="format-item">
+                                    <svg class="format-icon text-green" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <path d="m9 12 2 2 4-4"/>
+                                    </svg>
+                                    <span><strong>Column A:</strong> Question numbers (1, 2, 3...)</span>
+                                </div>
+                                <div class="format-item">
+                                    <svg class="format-icon text-green" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <path d="m9 12 2 2 4-4"/>
+                                    </svg>
+                                    <span><strong>Column B:</strong> Correct answers (A, B, C, D)</span>
+                                </div>
+                                <div class="format-item">
+                                    <svg class="format-icon text-green" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <path d="m9 12 2 2 4-4"/>
+                                    </svg>
+                                    <span><strong>File Format:</strong> Save as .xlsx or .xls</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Excel File Upload -->
+                    <div class="card card-upload">
+                        <div class="form-group">
+                            <label for="excel-file" class="form-label">Select Excel File</label>
+                            <input type="file" id="excel-file" accept=".xlsx,.xls" class="file-input-single">
+                        </div>
+                        
+                        <div id="excel-file-info" class="file-info hidden">
+                            <div class="file-info-icon">📊</div>
+                            <div class="file-info-details">
+                                <div id="excel-file-name" class="file-info-name"></div>
+                                <div id="excel-file-size" class="file-info-size"></div>
+                            </div>
+                            <button id="remove-excel-btn" class="btn btn-icon btn-danger">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M18 6 6 18"/>
+                                    <path d="m6 6 12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Error Message -->
+                    <div id="excel-error-message" class="alert alert-error hidden">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" x2="12" y1="8" y2="12"/>
+                            <line x1="12" x2="12.01" y1="16" y2="16"/>
+                        </svg>
+                        <span id="excel-error-text"></span>
+                    </div>
+
+                    <!-- Upload Button -->
+                    <div class="upload-actions">
+                        <button id="upload-excel-btn" class="btn btn-primary btn-lg" disabled>
+                            <span class="btn-text">Upload Answer Key</span>
+                            <span class="btn-loading hidden">
+                                <span class="spinner spinner-white"></span>
+                                Uploading...
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initUploadPage();
+});
+
+// State
+let selectedFiles = [];
+let excelFile = null;
+let isUploading = false;
+
+function initUploadPage() {
+    initTabs();
+    initDropZone();
+    initFileInput();
+    initExcelUpload();
+    initUploadButtons();
+}
+
+function initTabs() {
+    const triggers = document.querySelectorAll('.tab-trigger');
+    const panels = document.querySelectorAll('.tab-panel');
+    
+    triggers.forEach(trigger => {
+        trigger.addEventListener('click', () => {
+            const tabId = trigger.dataset.tab;
+            
+            triggers.forEach(t => t.classList.remove('active'));
+            trigger.classList.add('active');
+            
+            panels.forEach(p => p.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+        });
+    });
+}
+
+function initDropZone() {
+    const dropZone = document.getElementById('drop-zone');
+    
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+    
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+    
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        handleFiles(e.dataTransfer.files);
+    });
+}
+
+function initFileInput() {
+    const fileInput = document.getElementById('file-input');
+    fileInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+    });
+}
+
+function handleFiles(files) {
+    const validFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+    
+    if (validFiles.length === 0) {
+        showError('Please select valid image files');
+        return;
+    }
+    
+    selectedFiles = [...selectedFiles, ...validFiles];
+    updateFileList();
+    hideError();
+}
+
+function updateFileList() {
+    const container = document.getElementById('file-list-container');
+    const list = document.getElementById('file-list');
+    const count = document.getElementById('file-count');
+    const uploadBtn = document.getElementById('upload-btn');
+    
+    if (selectedFiles.length === 0) {
+        container.classList.add('hidden');
+        uploadBtn.disabled = true;
+        uploadBtn.querySelector('.btn-text').textContent = 'Upload Files';
+        return;
+    }
+    
+    container.classList.remove('hidden');
+    count.textContent = selectedFiles.length;
+    uploadBtn.disabled = false;
+    uploadBtn.querySelector('.btn-text').textContent = `Upload ${selectedFiles.length} File${selectedFiles.length !== 1 ? 's' : ''}`;
+    
+    list.innerHTML = selectedFiles.map((file, index) => `
+        <div class="file-item">
+            <div class="file-item-icon">📄</div>
+            <div class="file-item-details">
+                <div class="file-item-name">${file.name}</div>
+                <div class="file-item-size">${(file.size / 1024 / 1024).toFixed(2)} MB</div>
+            </div>
+            <button class="btn btn-icon btn-danger remove-file-btn" data-index="${index}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 6 6 18"/>
+                    <path d="m6 6 12 12"/>
+                </svg>
+            </button>
+        </div>
+    `).join('');
+    
+    // Add remove handlers
+    document.querySelectorAll('.remove-file-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const index = parseInt(btn.dataset.index);
+            selectedFiles.splice(index, 1);
+            updateFileList();
+        });
+    });
+}
+
+function initExcelUpload() {
+    const fileInput = document.getElementById('excel-file');
+    const removeBtn = document.getElementById('remove-excel-btn');
+    
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const validTypes = [
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-excel'
+            ];
+            
+            if (!validTypes.includes(file.type)) {
+                showExcelError('Please upload a valid Excel file (.xlsx or .xls)');
+                fileInput.value = '';
+                return;
+            }
+            
+            excelFile = file;
+            updateExcelFileInfo();
+            hideExcelError();
+        }
+    });
+    
+    removeBtn.addEventListener('click', () => {
+        excelFile = null;
+        fileInput.value = '';
+        updateExcelFileInfo();
+    });
+}
+
+function updateExcelFileInfo() {
+    const info = document.getElementById('excel-file-info');
+    const nameEl = document.getElementById('excel-file-name');
+    const sizeEl = document.getElementById('excel-file-size');
+    const uploadBtn = document.getElementById('upload-excel-btn');
+    
+    if (!excelFile) {
+        info.classList.add('hidden');
+        uploadBtn.disabled = true;
+        return;
+    }
+    
+    info.classList.remove('hidden');
+    nameEl.textContent = excelFile.name;
+    sizeEl.textContent = (excelFile.size / 1024).toFixed(2) + ' KB';
+    uploadBtn.disabled = false;
+}
+
+function initUploadButtons() {
+    document.getElementById('upload-btn').addEventListener('click', handleUpload);
+    document.getElementById('upload-excel-btn').addEventListener('click', handleExcelUpload);
+}
+
+function handleUpload() {
+    if (selectedFiles.length === 0) {
+        showError('Please select at least one file');
+        return;
+    }
+    
+    setUploading(true);
+    hideError();
+    
+    const formData = new FormData();
+    selectedFiles.forEach(file => formData.append('files', file));
+    
+    const batchName = document.getElementById('batch-name').value;
+    if (batchName) {
+        formData.append('batchName', batchName);
+    }
+    
+    fetch('/api/omr/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        window.location.href = `/processing/${data.batchId}`;
+    })
+    .catch(error => {
+        showError(error.message || 'Upload failed');
+        setUploading(false);
+    });
+}
+
+function handleExcelUpload() {
+    if (!excelFile) {
+        showExcelError('Please select an Excel file');
+        return;
+    }
+    
+    setUploading(true);
+    hideExcelError();
+    
+    const formData = new FormData();
+    formData.append('files', excelFile);
+    
+    const batchName = document.getElementById('batch-name').value;
+    if (batchName) {
+        formData.append('batchName', batchName);
+    }
+    
+    fetch('/api/answers/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        alert('Answer key uploaded successfully!');
+        excelFile = null;
+        document.getElementById('excel-file').value = '';
+        updateExcelFileInfo();
+    })
+    .catch(error => {
+        showExcelError(error.message || 'Upload failed');
+    })
+    .finally(() => {
+        setUploading(false);
+    });
+}
+
+function setUploading(uploading) {
+    isUploading = uploading;
+    const btns = document.querySelectorAll('#upload-btn, #upload-excel-btn');
+    btns.forEach(btn => {
+        btn.disabled = uploading;
+        btn.querySelector('.btn-text').classList.toggle('hidden', uploading);
+        btn.querySelector('.btn-loading').classList.toggle('hidden', !uploading);
+    });
+}
+
+function showError(message) {
+    const el = document.getElementById('error-message');
+    document.getElementById('error-text').textContent = message;
+    el.classList.remove('hidden');
+}
+
+function hideError() {
+    document.getElementById('error-message').classList.add('hidden');
+}
+
+function showExcelError(message) {
+    const el = document.getElementById('excel-error-message');
+    document.getElementById('excel-error-text').textContent = message;
+    el.classList.remove('hidden');
+}
+
+function hideExcelError() {
+    document.getElementById('excel-error-message').classList.add('hidden');
+}
+</script>
+{% endblock %}

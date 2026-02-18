@@ -1,0 +1,418 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | RVCE OMR Grading System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div id="dashboard-container">
+        <!-- Loading State -->
+        <div id="loading-state" class="loading-container">
+            <div class="mb-12 space-y-3">
+                <div class="skeleton h-12 w-350"></div>
+                <div class="skeleton h-6 w-600"></div>
+            </div>
+            <div class="stats-grid">
+                {% for i in range(4) %}
+                <div class="card">
+                    <div class="card-header flex-row">
+                        <div class="skeleton h-5 w-120"></div>
+                        <div class="skeleton h-6 w-6 rounded-full"></div>
+                    </div>
+                    <div class="card-content space-y-2">
+                        <div class="skeleton h-10 w-80"></div>
+                        <div class="skeleton h-4 w-140"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-state" class="error-container hidden">
+            <div class="error-box">
+                <div class="error-icon-container">
+                    <svg class="error-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" x2="12" y1="8" y2="12"/>
+                        <line x1="12" x2="12.01" y1="16" y2="16"/>
+                    </svg>
+                </div>
+                <h1 class="error-title">Unable to Load Dashboard</h1>
+                <p class="error-message" id="error-message">Failed to load dashboard statistics</p>
+                <a href="/upload" class="btn btn-primary btn-lg">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" x2="12" y1="3" y2="15"/>
+                    </svg>
+                    Upload New Batch
+                </a>
+            </div>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div id="dashboard-content" class="hidden">
+            <!-- Header -->
+            <div class="mb-12">
+                <h1 class="page-title">Dashboard</h1>
+                <p class="page-description">
+                    Monitor your OMR processing system and batch statistics
+                </p>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="card card-hover">
+                    <div class="card-header flex-row">
+                        <h3 class="card-title-sm">Total Batches</h3>
+                        <div class="icon-container bg-primary">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
+                                <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+                                <path d="m9 15 2 2 4-4"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="stat-value" id="total-batches">0</div>
+                        <p class="stat-label">Processed batches</p>
+                    </div>
+                </div>
+
+                <div class="card card-hover">
+                    <div class="card-header flex-row">
+                        <h3 class="card-title-sm">Total Scanned</h3>
+                        <div class="icon-container bg-blue">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 3v16a2 2 0 0 0 2 2h16"/>
+                                <path d="m19 9-5 5-4-4-3 3"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="stat-value" id="total-scanned">0</div>
+                        <p class="stat-label">OMR sheets processed</p>
+                    </div>
+                </div>
+
+                <div class="card card-hover">
+                    <div class="card-header flex-row">
+                        <h3 class="card-title-sm">Success Rate</h3>
+                        <div class="icon-container bg-green">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="m9 12 2 2 4-4"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="stat-value text-green" id="success-rate">0%</div>
+                        <p class="stat-label">Successfully processed</p>
+                    </div>
+                </div>
+
+                <div class="card card-hover">
+                    <div class="card-header flex-row">
+                        <h3 class="card-title-sm">Average Score</h3>
+                        <div class="icon-container bg-purple">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                                <polyline points="17 6 23 6 23 12"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="stat-value text-purple" id="average-score">0</div>
+                        <p class="stat-label">Out of 100 marks</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs Section -->
+            <div class="tabs-container">
+                <div class="tabs-list">
+                    <button class="tab-trigger active" data-tab="omr">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" x2="12" y1="3" y2="15"/>
+                        </svg>
+                        OMR Upload
+                    </button>
+                    <button class="tab-trigger" data-tab="excel">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="9" height="9" x="3" y="3" rx="1"/>
+                            <rect width="9" height="9" x="3" y="12" rx="1"/>
+                            <path d="M14 8h7v7h-7z"/>
+                            <path d="M14 17h7"/>
+                            <path d="M14 20h7"/>
+                        </svg>
+                        Excel Answers
+                    </button>
+                </div>
+
+                <div class="tabs-content">
+                    <div class="tab-panel active" id="tab-omr">
+                        <div class="cards-grid">
+                            <div class="card card-dashed">
+                                <div class="card-header">
+                                    <h3 class="card-title">Upload New Batch</h3>
+                                    <p class="card-description">Process OMR sheets by uploading multiple images</p>
+                                </div>
+                                <div class="card-content">
+                                    <a href="/upload" class="btn btn-primary btn-lg btn-full">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                            <polyline points="17 8 12 3 7 8"/>
+                                            <line x1="12" x2="12" y1="3" y2="15"/>
+                                        </svg>
+                                        Upload Batch
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">Processing Statistics</h3>
+                                    <p class="card-description">Current system metrics</p>
+                                </div>
+                                <div class="card-content space-y-3">
+                                    <div class="stat-row">
+                                        <span class="stat-text-muted">Failed Sheets</span>
+                                        <span class="stat-value-sm font-mono" id="total-failed">0</span>
+                                    </div>
+                                    <div class="stat-row">
+                                        <span class="stat-text-muted">Success Rate</span>
+                                        <span class="stat-value-sm text-green font-mono" id="success-rate-sm">0%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-panel" id="tab-excel">
+                        <div class="cards-grid">
+                            <div class="card card-dashed">
+                                <div class="card-header">
+                                    <h3 class="card-title">Upload Answer Key</h3>
+                                    <p class="card-description">Upload Excel file containing correct answers for evaluation</p>
+                                </div>
+                                <div class="card-content">
+                                    <a href="/upload/answers" class="btn btn-primary btn-lg btn-full">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect width="9" height="9" x="3" y="3" rx="1"/>
+                                            <rect width="9" height="9" x="3" y="12" rx="1"/>
+                                            <path d="M14 8h7v7h-7z"/>
+                                            <path d="M14 17h7"/>
+                                            <path d="M14 20h7"/>
+                                        </svg>
+                                        Upload Excel
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">Answer Key Format</h3>
+                                    <p class="card-description">Required Excel structure</p>
+                                </div>
+                                <div class="card-content">
+                                    <div class="format-list">
+                                        <div class="format-item">
+                                            <svg class="format-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <circle cx="12" cy="12" r="10"/>
+                                                <path d="m9 12 2 2 4-4"/>
+                                            </svg>
+                                            <span class="format-text">Column A: Question numbers (1, 2, 3...)</span>
+                                        </div>
+                                        <div class="format-item">
+                                            <svg class="format-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <circle cx="12" cy="12" r="10"/>
+                                                <path d="m9 12 2 2 4-4"/>
+                                            </svg>
+                                            <span class="format-text">Column B: Correct answers (A, B, C, D)</span>
+                                        </div>
+                                        <div class="format-item">
+                                            <svg class="format-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <circle cx="12" cy="12" r="10"/>
+                                                <path d="m9 12 2 2 4-4"/>
+                                            </svg>
+                                            <span class="format-text">Save as .xlsx or .xls format</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Batches -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title-lg">Recent Batches</h2>
+                    <p class="card-description">Recently processed OMR batches</p>
+                </div>
+                <div class="card-content">
+                    <div id="recent-batches-list" class="batches-list">
+                        <!-- Batches will be populated here -->
+                    </div>
+                    
+                    <div id="no-batches" class="no-batches hidden">
+                        <div class="no-batches-icon">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
+                                <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+                                <path d="m9 15 2 2 4-4"/>
+                            </svg>
+                        </div>
+                        <h3 class="no-batches-title">No batches yet</h3>
+                        <p class="no-batches-text">Get started by uploading your first OMR batch for automatic processing and grading</p>
+                        <a href="/upload" class="btn btn-primary btn-lg">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" x2="12" y1="3" y2="15"/>
+                            </svg>
+                            Upload Now
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize dashboard
+    initDashboard();
+});
+
+function initDashboard() {
+    // Fetch initial stats
+    fetchDashboardStats();
+    
+    // Set up polling every 5 seconds
+    setInterval(fetchDashboardStats, 5000);
+    
+    // Initialize tabs
+    initTabs();
+}
+
+function fetchDashboardStats() {
+    fetch('/api/stats/dashboard')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                showError(data.error);
+                return;
+            }
+            showDashboard(data);
+        })
+        .catch(error => {
+            showError('Failed to load dashboard statistics');
+            console.error('Dashboard error:', error);
+        });
+}
+
+function showDashboard(stats) {
+    document.getElementById('loading-state').classList.add('hidden');
+    document.getElementById('error-state').classList.add('hidden');
+    document.getElementById('dashboard-content').classList.remove('hidden');
+    
+    // Update stats
+    document.getElementById('total-batches').textContent = stats.totalBatches || 0;
+    document.getElementById('total-scanned').textContent = stats.totalScanned || 0;
+    document.getElementById('success-rate').textContent = (stats.successRate || 0).toFixed(1) + '%';
+    document.getElementById('average-score').textContent = (stats.averageScore || 0).toFixed(1);
+    document.getElementById('total-failed').textContent = stats.totalFailed || 0;
+    document.getElementById('success-rate-sm').textContent = (stats.successRate || 0).toFixed(1) + '%';
+    
+    // Update recent batches
+    updateRecentBatches(stats.recentBatches || []);
+}
+
+function showError(message) {
+    document.getElementById('loading-state').classList.add('hidden');
+    document.getElementById('dashboard-content').classList.add('hidden');
+    document.getElementById('error-state').classList.remove('hidden');
+    document.getElementById('error-message').textContent = message;
+}
+
+function updateRecentBatches(batches) {
+    const listEl = document.getElementById('recent-batches-list');
+    const noBatchesEl = document.getElementById('no-batches');
+    
+    if (batches.length === 0) {
+        listEl.innerHTML = '';
+        noBatchesEl.classList.remove('hidden');
+        return;
+    }
+    
+    noBatchesEl.classList.add('hidden');
+    
+    listEl.innerHTML = batches.map(batch => {
+        const statusClass = batch.status === 'completed' ? 'status-completed' : 
+                           batch.status === 'processing' ? 'status-processing' : 'status-pending';
+        const date = new Date(batch.createdAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+        
+        return `
+            <div class="batch-item">
+                <div class="batch-info">
+                    <div class="batch-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
+                            <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+                            <path d="m9 15 2 2 4-4"/>
+                        </svg>
+                    </div>
+                    <div class="batch-details">
+                        <div class="batch-id">${batch.batchId}</div>
+                        <div class="batch-meta">${batch.fileCount} files • ${date}</div>
+                    </div>
+                </div>
+                <div class="batch-actions">
+                    <span class="status-badge ${statusClass}">
+                        ${batch.status === 'processing' ? '<span class="spinner"></span>' : ''}
+                        ${batch.status}
+                    </span>
+                    <a href="/results/${batch.batchId}" class="btn btn-ghost">
+                        View Results
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14"/>
+                            <path d="m12 5 7 7-7 7"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function initTabs() {
+    const triggers = document.querySelectorAll('.tab-trigger');
+    const panels = document.querySelectorAll('.tab-panel');
+    
+    triggers.forEach(trigger => {
+        trigger.addEventListener('click', () => {
+            const tabId = trigger.dataset.tab;
+            
+            // Update triggers
+            triggers.forEach(t => t.classList.remove('active'));
+            trigger.classList.add('active');
+            
+            // Update panels
+            panels.forEach(p => p.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+        });
+    });
+}
+</script>
+{% endblock %}
