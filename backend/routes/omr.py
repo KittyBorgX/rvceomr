@@ -13,7 +13,7 @@ from typing import List
 
 import pandas as pd
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 
 from backend.config import (
     ALLOWED_EXTENSIONS,
@@ -27,6 +27,7 @@ from backend.utils.csv_helper import (
     get_batch_results,
     get_dashboard_stats,
     initialize_results_csv,
+    RESULTS_CSV_PATH,
 )
 from backend.workers.processor import (
     batch_status,
@@ -396,25 +397,53 @@ async def get_dashboard():
 @router.get("/download-all")
 async def download_all_results():
     """
-    Download all results as a single master CSV file
+    Download all results as a single master CSV file with batch separators
 
     Returns:
-        CSV file download with all batches combined
+        CSV file download with all batches separated by blank rows
     """
-    from backend.utils.csv_helper import RESULTS_CSV_PATH
-
     logger.info(f"📥 Download all results request")
 
     if not RESULTS_CSV_PATH.exists():
         logger.error(f"❌ Master CSV not found at: {RESULTS_CSV_PATH}")
         raise HTTPException(status_code=404, detail="No results found")
 
-    logger.info(f"✅ Master CSV found: {RESULTS_CSV_PATH}")
-    logger.info(f"   File size: {RESULTS_CSV_PATH.stat().st_size} bytes")
+    # Read the master CSV
+    df = pd.read_csv(RESULTS_CSV_PATH)
 
-    return FileResponse(
-        path=str(RESULTS_CSV_PATH),
+    if df.empty:
+        raise HTTPException(status_code=404, detail="No results found")
+
+    logger.info(f"📊 Processing {len(df)} rows from master CSV")
+
+    # Create formatted CSV with batch separators
+    output = io.StringIO()
+
+    # Group by batchId
+    batches = df.groupby("batchId", sort=False)
+
+    first_batch = True
+    for batch_id, batch_df in batches:
+        if not first_batch:
+            # Add blank rows between batches
+            output.write("\n\n")
+        first_batch = False
+
+        # Write batch header comment
+        output.write(f"# BATCH: {batch_id}\n")
+        output.write(f"# Files: {len(batch_df)}\n")
+
+        # Write the batch data
+        batch_df.to_csv(output, index=False)
+
+    # Get the CSV content
+    csv_content = output.getvalue()
+    output.close()
+
+    logger.info(f"✅ Formatted CSV created with {len(batches)} batches")
+
+    return StreamingResponse(
+        io.BytesIO(csv_content.encode("utf-8")),
         media_type="text/csv",
-        filename="Results_All_Batches.csv",
         headers={"Content-Disposition": "attachment; filename=Results_All_Batches.csv"},
     )

@@ -247,29 +247,26 @@
                 </div>
             </div>
 
-            <!-- Download All Button -->
-            <div class="mb-6">
-                <button id="download-all-btn" class="btn btn-success btn-lg">
-                    <span class="btn-text">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                            <polyline points="7 10 12 15 17 10"/>
-                            <line x1="12" x2="12" y1="15" y2="3"/>
-                        </svg>
-                        Download All Results
-                    </span>
-                    <span class="btn-loading hidden">
-                        <span class="spinner spinner-white"></span>
-                        Downloading...
-                    </span>
-                </button>
-            </div>
-
             <!-- Recent Batches -->
             <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title-lg">Recent Batches</h2>
-                    <p class="card-description">Recently processed OMR batches</p>
+                <div class="card-header flex-row" style="justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h2 class="card-title-lg">Recent Batches</h2>
+                        <p class="card-description">Recently processed OMR batches</p>
+                    </div>
+                    <button id="download-all-btn" class="btn btn-success">
+                        <span class="btn-text">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" x2="12" y1="15" y2="3"/>
+                            </svg>
+                            Download All
+                        </span>
+                        <span class="btn-loading hidden">
+                            <span class="spinner spinner-white spinner-sm"></span>
+                        </span>
+                    </button>
                 </div>
                 <div class="card-content">
                     <div id="recent-batches-list" class="batches-list">
