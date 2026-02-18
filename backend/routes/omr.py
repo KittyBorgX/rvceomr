@@ -397,12 +397,80 @@ async def get_dashboard():
 @router.get("/download-all")
 async def download_all_results():
     """
-    Download all results as a single master CSV file with batch separators
+    Download all results as a simplified CSV with only rollNumber, score, maxScore, error
 
     Returns:
-        CSV file download with all batches separated by blank rows
+        CSV file download with simplified view of all batches
     """
     logger.info(f"📥 Download all results request")
+
+    if not RESULTS_CSV_PATH.exists():
+        logger.error(f"❌ Master CSV not found at: {RESULTS_CSV_PATH}")
+        raise HTTPException(status_code=404, detail="No results found")
+
+    # Read the master CSV
+    df = pd.read_csv(RESULTS_CSV_PATH)
+
+    if df.empty:
+        raise HTTPException(status_code=404, detail="No results found")
+
+    logger.info(f"📊 Processing {len(df)} rows from master CSV")
+
+    # Select only the columns we need
+    columns = ["batchId", "rollNumber", "score", "maxScore", "error"]
+
+    # Check which columns exist in the dataframe
+    available_columns = [col for col in columns if col in df.columns]
+    simplified_df = df[available_columns].copy()
+
+    # Create formatted CSV with batch separators
+    output = io.StringIO()
+
+    # Group by batchId
+    batches = df.groupby("batchId", sort=False)
+
+    first_batch = True
+    for batch_id, _ in batches:
+        if not first_batch:
+            # Add blank rows between batches
+            output.write("\n\n")
+        first_batch = False
+
+        # Get rows for this batch from simplified dataframe
+        batch_rows = simplified_df[simplified_df["batchId"] == batch_id]
+
+        # Write batch header comment
+        output.write(f"# BATCH: {batch_id}\n")
+        output.write(f"# Files: {len(batch_rows)}\n")
+
+        # Write only the data columns (without batchId)
+        display_columns = [col for col in available_columns if col != "batchId"]
+        batch_rows[display_columns].to_csv(output, index=False)
+
+    # Get the CSV content
+    csv_content = output.getvalue()
+    output.close()
+
+    logger.info(f"✅ Simplified CSV created with {len(batches)} batches")
+
+    return StreamingResponse(
+        io.BytesIO(csv_content.encode("utf-8")),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=Results_All_Batches_Simplified.csv"
+        },
+    )
+
+
+@router.get("/download-all-full")
+async def download_all_results_full():
+    """
+    Download all results as a full CSV with all columns
+
+    Returns:
+        CSV file download with complete data for all batches
+    """
+    logger.info(f"📥 Download all results (full) request")
 
     if not RESULTS_CSV_PATH.exists():
         logger.error(f"❌ Master CSV not found at: {RESULTS_CSV_PATH}")
@@ -433,17 +501,19 @@ async def download_all_results():
         output.write(f"# BATCH: {batch_id}\n")
         output.write(f"# Files: {len(batch_df)}\n")
 
-        # Write the batch data
+        # Write all columns
         batch_df.to_csv(output, index=False)
 
     # Get the CSV content
     csv_content = output.getvalue()
     output.close()
 
-    logger.info(f"✅ Formatted CSV created with {len(batches)} batches")
+    logger.info(f"✅ Full CSV created with {len(batches)} batches")
 
     return StreamingResponse(
         io.BytesIO(csv_content.encode("utf-8")),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=Results_All_Batches.csv"},
+        headers={
+            "Content-Disposition": "attachment; filename=Results_All_Batches_Full.csv"
+        },
     )

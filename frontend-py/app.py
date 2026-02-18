@@ -83,8 +83,15 @@ class ApiClient:
         return response.content
 
     def download_all_results(self):
-        """Download all results as master CSV"""
+        """Download all results as simplified CSV"""
         url = f"{self.base_url}/omr/download-all"
+        response = self.session.get(url, stream=True)
+        response.raise_for_status()
+        return response.content
+
+    def download_all_results_full(self):
+        """Download all results as full CSV with all columns"""
+        url = f"{self.base_url}/omr/download-all-full"
         response = self.session.get(url, stream=True)
         response.raise_for_status()
         return response.content
@@ -219,14 +226,30 @@ def api_download_results(batch_id):
 
 @app.route("/api/omr/download-all")
 def api_download_all_results():
-    """Download all results as master CSV"""
+    """Download all results as simplified CSV"""
     try:
         content = api_client.download_all_results()
         return Response(
             content,
             mimetype="text/csv",
             headers={
-                "Content-Disposition": "attachment; filename=Results_All_Batches.csv"
+                "Content-Disposition": "attachment; filename=Results_All_Batches_Summary.csv"
+            },
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/omr/download-all-full")
+def api_download_all_results_full():
+    """Download all results as full CSV with all columns"""
+    try:
+        content = api_client.download_all_results_full()
+        return Response(
+            content,
+            mimetype="text/csv",
+            headers={
+                "Content-Disposition": "attachment; filename=Results_All_Batches_Full.csv"
             },
         )
     except Exception as e:
