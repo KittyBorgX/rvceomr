@@ -82,6 +82,13 @@ class ApiClient:
         response.raise_for_status()
         return response.content
 
+    def download_all_results(self):
+        """Download all results as master CSV"""
+        url = f"{self.base_url}/omr/download-all"
+        response = self.session.get(url, stream=True)
+        response.raise_for_status()
+        return response.content
+
     def get_dashboard_stats(self):
         """Get dashboard statistics"""
         url = f"{self.base_url}/omr/dashboard"
@@ -204,6 +211,22 @@ def api_download_results(batch_id):
             mimetype="text/csv",
             headers={
                 "Content-Disposition": f"attachment; filename=Results_{batch_id}.csv"
+            },
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/omr/download-all")
+def api_download_all_results():
+    """Download all results as master CSV"""
+    try:
+        content = api_client.download_all_results()
+        return Response(
+            content,
+            mimetype="text/csv",
+            headers={
+                "Content-Disposition": "attachment; filename=Results_All_Batches.csv"
             },
         )
     except Exception as e:

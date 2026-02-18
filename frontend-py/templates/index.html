@@ -247,6 +247,24 @@
                 </div>
             </div>
 
+            <!-- Download All Button -->
+            <div class="mb-6">
+                <button id="download-all-btn" class="btn btn-success btn-lg">
+                    <span class="btn-text">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" x2="12" y1="15" y2="3"/>
+                        </svg>
+                        Download All Results
+                    </span>
+                    <span class="btn-loading hidden">
+                        <span class="spinner spinner-white"></span>
+                        Downloading...
+                    </span>
+                </button>
+            </div>
+
             <!-- Recent Batches -->
             <div class="card">
                 <div class="card-header">
@@ -300,6 +318,56 @@ function initDashboard() {
     
     // Initialize tabs
     initTabs();
+    
+    // Initialize download all button
+    initDownloadAllButton();
+}
+
+function initDownloadAllButton() {
+    const btn = document.getElementById('download-all-btn');
+    if (btn) {
+        btn.addEventListener('click', handleDownloadAll);
+    }
+}
+
+function handleDownloadAll() {
+    const btn = document.getElementById('download-all-btn');
+    setBtnLoading(btn, true);
+    
+    fetch('/api/omr/download-all')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Download failed');
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            // Create download link
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Results_All_Batches.csv';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        })
+        .catch(error => {
+            console.error('Download failed:', error);
+            alert('Failed to download results: ' + error.message);
+        })
+        .finally(() => {
+            setBtnLoading(btn, false);
+        });
+}
+
+function setBtnLoading(btn, loading) {
+    if (!btn) return;
+    btn.disabled = loading;
+    const btnText = btn.querySelector('.btn-text');
+    const btnLoading = btn.querySelector('.btn-loading');
+    if (btnText) btnText.classList.toggle('hidden', loading);
+    if (btnLoading) btnLoading.classList.toggle('hidden', !loading);
 }
 
 function fetchDashboardStats() {

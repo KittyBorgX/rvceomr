@@ -391,3 +391,30 @@ async def get_dashboard():
         "averageScore": stats["averageScore"],
         "recentBatches": stats["recentBatches"],
     }
+
+
+@router.get("/download-all")
+async def download_all_results():
+    """
+    Download all results as a single master CSV file
+
+    Returns:
+        CSV file download with all batches combined
+    """
+    from backend.utils.csv_helper import RESULTS_CSV_PATH
+
+    logger.info(f"📥 Download all results request")
+
+    if not RESULTS_CSV_PATH.exists():
+        logger.error(f"❌ Master CSV not found at: {RESULTS_CSV_PATH}")
+        raise HTTPException(status_code=404, detail="No results found")
+
+    logger.info(f"✅ Master CSV found: {RESULTS_CSV_PATH}")
+    logger.info(f"   File size: {RESULTS_CSV_PATH.stat().st_size} bytes")
+
+    return FileResponse(
+        path=str(RESULTS_CSV_PATH),
+        media_type="text/csv",
+        filename="Results_All_Batches.csv",
+        headers={"Content-Disposition": "attachment; filename=Results_All_Batches.csv"},
+    )
