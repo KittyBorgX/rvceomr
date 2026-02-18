@@ -118,12 +118,19 @@ async def upload_batch(
     logger.info(f"✅ All {len(files)} files validated successfully")
 
     # Create unique batch ID
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     if batchName:
         # Sanitize batch name for filesystem safety
         safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in batchName)
-        batch_id = f"{safe_name}_{timestamp}"
+        batch_id = safe_name
+
+        # Check if batch directory already exists, append counter if needed
+        counter = 1
+        original_batch_id = batch_id
+        while (UPLOADS_DIR / batch_id).exists():
+            batch_id = f"{original_batch_id}_{counter}"
+            counter += 1
     else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         batch_id = f"batch_{timestamp}"
 
     logger.info(f"🆔 Created batch ID: {batch_id}")
