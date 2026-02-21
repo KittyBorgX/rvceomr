@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import List
 
 import pandas as pd
-from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse, StreamingResponse
 
 from backend.config import (
     ALLOWED_EXTENSIONS,
@@ -27,6 +27,7 @@ from backend.utils.csv_helper import (
     get_batch_results,
     get_dashboard_stats,
     initialize_results_csv,
+    RESULTS_CSV_PATH,
 )
 from backend.workers.processor import (
     batch_status,
@@ -47,6 +48,7 @@ def _to_number(value, default=0.0):
         return n
     except Exception:
         return float(default)
+
 
 # Get logger (configured in main.py)
 logger = logging.getLogger(__name__)
@@ -85,7 +87,9 @@ def validate_image_file(file: UploadFile) -> bool:
 
 @router.post("/upload")
 async def upload_batch(
-    files: List[UploadFile] = File(...), background_tasks: BackgroundTasks = None
+    files: List[UploadFile] = File(...),
+    batchName: str = Form(None),
+    background_tasks: BackgroundTasks = None,
 ):
     """
     Upload a batch of OMR images for processing
@@ -115,8 +119,20 @@ async def upload_batch(
     logger.info(f"✅ All {len(files)} files validated successfully")
 
     # Create unique batch ID
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    batch_id = f"batch_{timestamp}"
+    if batchName:
+        # Sanitize batch name for filesystem safety
+        safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in batchName)
+        batch_id = safe_name
+
+        # Check if batch directory already exists, append counter if needed
+        counter = 1
+        original_batch_id = batch_id
+        while (UPLOADS_DIR / batch_id).exists():
+            batch_id = f"{original_batch_id}_{counter}"
+            counter += 1
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        batch_id = f"batch_{timestamp}"
 
     logger.info(f"🆔 Created batch ID: {batch_id}")
 
@@ -302,15 +318,17 @@ async def get_results(batch_id: str):
     # Simplify results for response
     simplified_results = []
     for r in results:
-        simplified_results.append({
-            "fileName": r.get("fileName", ""),
-            "rollNumber": r.get("rollNumber", ""),
-            "score": _to_number(r.get("score", 0)),
-            "maxScore": _to_number(r.get("maxScore", 0)),
-            "percentage": _to_number(r.get("percentage", 0)),
-            "status": r.get("status", ""),
-            "error": r.get("error", ""),
-        })
+        simplified_results.append(
+            {
+                "fileName": r.get("fileName", ""),
+                "rollNumber": r.get("rollNumber", ""),
+                "score": _to_number(r.get("score", 0)),
+                "maxScore": _to_number(r.get("maxScore", 0)),
+                "percentage": _to_number(r.get("percentage", 0)),
+                "status": r.get("status", ""),
+                "error": r.get("error", ""),
+            }
+        )
 
     return {
         "batchId": batch_id,
@@ -327,15 +345,59 @@ async def get_results(batch_id: str):
 @router.get("/download/{batch_id}")
 async def download_results(batch_id: str):
     """
-    Download results as CSV file
+    Download results as simplified CSV file (rollNumber, score, maxScore, error only)
 
     Args:
         batch_id: Batch identifier
 
     Returns:
-        CSV file download
+        CSV file download with simplified columns
     """
-    logger.info(f"📥 Download request received for batch: {batch_id}")
+    logger.info(f"📥 Download request received for batch: {batch_id} (summary)")
+
+    # Get results for the batch
+    results = get_batch_results(batch_id)
+
+    if not results:
+        logger.error(f"❌ No results found for batch: {batch_id}")
+        raise HTTPException(status_code=404, detail="Results not found")
+
+    # Create simplified CSV with only required columns
+    output = io.StringIO()
+    df = pd.DataFrame(results)
+
+    # Select only the columns we need
+    columns = ["rollNumber", "score", "maxScore", "error"]
+    available_columns = [col for col in columns if col in df.columns]
+    simplified_df = df[available_columns]
+
+    simplified_df.to_csv(output, index=False)
+    csv_content = output.getvalue()
+    output.close()
+
+    logger.info(f"✅ Simplified CSV created for batch: {batch_id}")
+
+    return StreamingResponse(
+        io.BytesIO(csv_content.encode("utf-8")),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename=Results_{batch_id}_Summary.csv"
+        },
+    )
+
+
+@router.get("/download/{batch_id}/full")
+async def download_results_full(batch_id: str):
+    """
+    Download results as full CSV file with all columns
+
+    Args:
+        batch_id: Batch identifier
+
+    Returns:
+        CSV file download with all columns
+    """
+    logger.info(f"📥 Download request received for batch: {batch_id} (full)")
 
     # Export batch to CSV
     csv_path = get_batch_csv_export(batch_id)
@@ -351,8 +413,10 @@ async def download_results(batch_id: str):
     return FileResponse(
         path=str(csv_path),
         media_type="text/csv",
-        filename=f"Results_{batch_id}.csv",
-        headers={"Content-Disposition": f"attachment; filename=Results_{batch_id}.csv"},
+        filename=f"Results_{batch_id}_Full.csv",
+        headers={
+            "Content-Disposition": f"attachment; filename=Results_{batch_id}_Full.csv"
+        },
     )
 
 
@@ -374,3 +438,128 @@ async def get_dashboard():
         "averageScore": stats["averageScore"],
         "recentBatches": stats["recentBatches"],
     }
+
+
+@router.get("/download-all")
+async def download_all_results():
+    """
+    Download all results as a simplified CSV with only rollNumber, score, maxScore, error
+
+    Returns:
+        CSV file download with simplified view of all batches
+    """
+    logger.info(f"📥 Download all results request")
+
+    if not RESULTS_CSV_PATH.exists():
+        logger.error(f"❌ Master CSV not found at: {RESULTS_CSV_PATH}")
+        raise HTTPException(status_code=404, detail="No results found")
+
+    # Read the master CSV
+    df = pd.read_csv(RESULTS_CSV_PATH)
+
+    if df.empty:
+        raise HTTPException(status_code=404, detail="No results found")
+
+    logger.info(f"📊 Processing {len(df)} rows from master CSV")
+
+    # Select only the columns we need
+    columns = ["batchId", "rollNumber", "score", "maxScore", "error"]
+
+    # Check which columns exist in the dataframe
+    available_columns = [col for col in columns if col in df.columns]
+    simplified_df = df[available_columns].copy()
+
+    # Create formatted CSV with batch separators
+    output = io.StringIO()
+
+    # Group by batchId
+    batches = df.groupby("batchId", sort=False)
+
+    first_batch = True
+    for batch_id, _ in batches:
+        if not first_batch:
+            # Add blank rows between batches
+            output.write("\n\n")
+        first_batch = False
+
+        # Get rows for this batch from simplified dataframe
+        batch_rows = simplified_df[simplified_df["batchId"] == batch_id]
+
+        # Write batch header comment
+        output.write(f"# BATCH: {batch_id}\n")
+        output.write(f"# Files: {len(batch_rows)}\n")
+
+        # Write only the data columns (without batchId)
+        display_columns = [col for col in available_columns if col != "batchId"]
+        batch_rows[display_columns].to_csv(output, index=False)
+
+    # Get the CSV content
+    csv_content = output.getvalue()
+    output.close()
+
+    logger.info(f"✅ Simplified CSV created with {len(batches)} batches")
+
+    return StreamingResponse(
+        io.BytesIO(csv_content.encode("utf-8")),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=Results_All_Batches_Simplified.csv"
+        },
+    )
+
+
+@router.get("/download-all-full")
+async def download_all_results_full():
+    """
+    Download all results as a full CSV with all columns
+
+    Returns:
+        CSV file download with complete data for all batches
+    """
+    logger.info(f"📥 Download all results (full) request")
+
+    if not RESULTS_CSV_PATH.exists():
+        logger.error(f"❌ Master CSV not found at: {RESULTS_CSV_PATH}")
+        raise HTTPException(status_code=404, detail="No results found")
+
+    # Read the master CSV
+    df = pd.read_csv(RESULTS_CSV_PATH)
+
+    if df.empty:
+        raise HTTPException(status_code=404, detail="No results found")
+
+    logger.info(f"📊 Processing {len(df)} rows from master CSV")
+
+    # Create formatted CSV with batch separators
+    output = io.StringIO()
+
+    # Group by batchId
+    batches = df.groupby("batchId", sort=False)
+
+    first_batch = True
+    for batch_id, batch_df in batches:
+        if not first_batch:
+            # Add blank rows between batches
+            output.write("\n\n")
+        first_batch = False
+
+        # Write batch header comment
+        output.write(f"# BATCH: {batch_id}\n")
+        output.write(f"# Files: {len(batch_df)}\n")
+
+        # Write all columns
+        batch_df.to_csv(output, index=False)
+
+    # Get the CSV content
+    csv_content = output.getvalue()
+    output.close()
+
+    logger.info(f"✅ Full CSV created with {len(batches)} batches")
+
+    return StreamingResponse(
+        io.BytesIO(csv_content.encode("utf-8")),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=Results_All_Batches_Full.csv"
+        },
+    )
