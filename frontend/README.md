@@ -1,115 +1,159 @@
-# OMR Grading System - Frontend
+# RVCE OMR Grading System - Python Frontend
 
-A modern Next.js frontend for the OMR (Optical Mark Recognition) batch grading system.
+A 1:1 Python Flask port of the Next.js TypeScript frontend for the RVCE OMR Grading System.
+
+## Overview
+
+This is a complete rewrite of the frontend using Python Flask with Jinja2 templates, replicating all functionality from the original Next.js application.
 
 ## Features
 
-- 📊 **Dashboard**: View statistics and recent batch processing results
-- 📤 **Batch Upload**: Drag-and-drop interface for uploading multiple OMR sheets
-- ⏳ **Real-time Processing**: Live progress tracking during batch processing
-- 📋 **Results Display**: Detailed results table with CSV download
-- 🎨 **Modern UI**: Clean, responsive design with Tailwind CSS
-
-## Tech Stack
-
-- **Framework**: Next.js 14 with App Router
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **File Upload**: React Dropzone
-- **API Client**: Custom fetch-based client
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- npm or yarn
-
-### Installation
-
-1. Install dependencies:
-```bash
-npm install
-```
-
-2. Start the development server:
-```bash
-npm run dev
-```
-
-3. Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-### Backend Integration
-
-The frontend expects a FastAPI backend running on `http://localhost:8000`. Make sure the backend is running before using the frontend.
-
-To change the API URL, update `API_BASE_URL` in `src/lib/api.ts`.
+- **Dashboard**: View statistics, recent batches, and system metrics
+- **Upload Center**: Upload OMR sheets and Excel answer keys
+- **Processing Page**: Real-time batch processing status with polling
+- **Results Page**: View and download batch results as CSV
+- **Responsive Design**: Mobile-friendly interface
+- **Dark Mode Support**: Automatic dark mode based on system preference
 
 ## Project Structure
 
 ```
-src/
-├── app/                    # Next.js app router pages
-│   ├── layout.tsx         # Root layout with navigation
-│   ├── page.tsx           # Dashboard page
-│   ├── upload/            # Upload page
-│   ├── processing/[batchId]/  # Processing status page
-│   └── results/[batchId]/     # Results display page
-├── components/            # Reusable UI components
-│   ├── UploadZone.tsx     # File upload component
-│   ├── ProgressTracker.tsx # Processing progress display
-│   └── ResultsTable.tsx   # Results table with CSV download
-└── lib/
-    └── api.ts             # API client and type definitions
+frontend-py/
+├── app.py                    # Flask application with routes
+├── requirements.txt          # Python dependencies
+├── README.md                 # This file
+├── static/
+│   ├── css/
+│   │   └── styles.css       # Converted from Tailwind CSS
+│   ├── js/
+│   │   └── app.js           # Main JavaScript utilities
+│   └── images/              # Static assets (logos, favicon)
+└── templates/
+    ├── base.html            # Base layout template
+    ├── index.html           # Dashboard page
+    ├── upload.html          # Upload center page
+    ├── processing.html      # Batch processing status page
+    ├── results.html         # Results view page
+    └── error.html           # Error page
+```
+
+## Installation
+
+1. Create a virtual environment:
+```bash
+cd frontend-py
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+## Configuration
+
+Set environment variables:
+
+```bash
+# API URL (default: http://localhost:8000/api)
+export API_URL=http://localhost:8000/api
+
+# Flask secret key (change in production)
+export SECRET_KEY=your-secret-key-here
+
+# Flask environment
+export FLASK_ENV=development
+export FLASK_APP=app.py
+```
+
+## Running the Application
+
+### Development Mode
+
+```bash
+python app.py
+```
+
+The application will be available at `http://localhost:3000`
+
+### Production Mode
+
+```bash
+export FLASK_ENV=production
+gunicorn -w 4 -b 0.0.0.0:3000 app:app
 ```
 
 ## API Endpoints
 
-The frontend communicates with these backend endpoints:
+The frontend proxies all API calls to the backend:
 
-- `POST /api/omr/upload` - Upload batch of OMR files
-- `GET /api/omr/status/{batchId}` - Get processing status
-- `GET /api/omr/results/{batchId}` - Get final results
-- `GET /api/omr/download/{batchId}` - Download CSV results
-- `GET /api/omr/dashboard` - Get dashboard statistics
+- `GET /api/stats/dashboard` - Dashboard statistics
+- `POST /api/omr/upload` - Upload OMR batch
+- `POST /api/answers/upload` - Upload Excel answer key
+- `GET /api/omr/status/<batch_id>` - Get batch status
+- `GET /api/omr/results/<batch_id>` - Get batch results
+- `GET /api/omr/results/<batch_id>/download` - Download CSV
 
-## Development
+## Pages
 
-### Available Scripts
+### Dashboard (`/`)
+- Statistics cards (Total Batches, Total Scanned, Success Rate, Average Score)
+- Recent batches list with status
+- Tabs for OMR Upload and Excel Answers
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run lint` - Run ESLint
+### Upload Center (`/upload`)
+- Drag-and-drop file upload for OMR images
+- Excel file upload for answer keys
+- Batch name input
+- File validation
 
-### Code Quality
+### Processing (`/processing/<batch_id>`)
+- Real-time progress tracking
+- Individual file status
+- Auto-redirect to results when complete
+- Polling every 2 seconds
 
-The project uses:
-- **ESLint** for code linting
-- **TypeScript** for type safety
-- **Tailwind CSS** for styling
+### Results (`/results/<batch_id>`)
+- Summary statistics
+- Detailed results table
+- CSV download functionality
 
-## Deployment
+## Technology Stack
 
-Build the application for production:
+- **Backend**: Flask (Python)
+- **Templates**: Jinja2
+- **Styling**: Vanilla CSS (converted from Tailwind)
+- **JavaScript**: Vanilla JS (no frameworks)
+- **API**: RESTful HTTP requests
 
-```bash
-npm run build
-npm run start
-```
+## Differences from Original Next.js Version
 
-The application will be available on port 3000 by default.
+1. **No Server-Side Rendering**: Uses client-side JavaScript for dynamic content
+2. **No React Components**: Pure HTML templates with vanilla JS
+3. **Simpler Build Process**: No build step required
+4. **Python Ecosystem**: Uses Flask instead of Next.js
 
 ## Browser Support
 
-- Chrome 90+
+- Chrome/Edge 90+
 - Firefox 88+
 - Safari 14+
-- Edge 90+
+- Mobile browsers (iOS Safari, Chrome Mobile)
 
-## Contributing
+## Development
 
-1. Follow the existing code style
-2. Add TypeScript types for new features
-3. Test components with different screen sizes
-4. Update this README for any new features
+To add new features or modify existing ones:
+
+1. **Templates**: Edit files in `templates/` directory
+2. **Styles**: Modify `static/css/styles.css`
+3. **JavaScript**: Add to `static/js/app.js` or inline in templates
+4. **Routes**: Add new routes in `app.py`
+
+## License
+
+Same as the original project.
+
+## Support
+
+For issues or questions, refer to the main project documentation.

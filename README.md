@@ -13,7 +13,7 @@ frontend (localhost:3000):
 
 ```sh
 cd frontend
-npm run dev
+python app.py
 ```
 
 ### python virtual env: 
